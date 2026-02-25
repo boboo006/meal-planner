@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>鮮蔬買菜大師 | Fresh Market Master</title>
+    <meta name="description" content="專屬蔬菜買菜與每日菜單規劃工具。">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&family=Noto+Sans+TC:wght@400;700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <div class="app-container">
+        <header>
+            <div class="header-content">
+                <h1>孰手之<span>菜色規劃</span></h1>
+                <p>管理您的食材庫並記錄每日飲食</p>
+            </div>
+        </header>
+
+        <main>
+            <!-- 畫面一：首頁 (月曆與當日紀錄) -->
+            <div id="home-page" class="view-page">
+                <!-- 月曆選擇區 -->
+                <section class="section menu-section">
+                    <div class="section-header">
+                        <h2>規劃與記錄</h2>
+                    </div>
+
+                    <div class="calendar-wrapper">
+                        <div class="calendar-header">
+                            <button id="prev-month" class="cal-btn">&lt;</button>
+                            <h3 id="calendar-title">2024年 2月</h3>
+                            <button id="next-month" class="cal-btn">&gt;</button>
+                        </div>
+                        <div class="calendar-weekdays">
+                            <div>日</div>
+                            <div>一</div>
+                            <div>二</div>
+                            <div>三</div>
+                            <div>四</div>
+                            <div>五</div>
+                            <div>六</div>
+                        </div>
+                        <div id="calendar-grid" class="calendar-grid"></div>
+                    </div>
+                </section>
+
+                <!-- 每日記錄顯示區 -->
+                <section class="section highlight-section">
+                    <div class="section-header">
+                        <div class="active-day-title">今日紀錄：<span id="current-day-name">--</span></div>
+                        <button id="clear-menu" class="text-btn">全部清除</button>
+                    </div>
+                    <div id="daily-selection" class="selection-container">
+                        <div class="empty-state">目前紀錄空白。</div>
+                    </div>
+                    <button id="go-to-pool" class="primary-btn full-width" style="margin-top: 20px;">
+                        + 挑選與編輯食材庫
+                    </button>
+                </section>
+            </div>
+
+            <!-- 畫面二：食材管理頁 (挑選與新增) -->
+            <div id="pool-page" class="view-page hidden">
+                <section class="section">
+                    <div class="section-header">
+                        <button id="back-to-home" class="icon-btn">← 返回</button>
+                        <h2>食材管理與挑選</h2>
+                    </div>
+
+                    <div class="active-date-badge">
+                        正在挑選：<span id="picking-date">--</span>
+                    </div>
+
+                    <div class="input-card">
+                        <input type="text" id="item-input" placeholder="新增食材，例如：蘆筍" aria-label="新增食材">
+                        <button id="add-btn">新增</button>
+                    </div>
+
+                    <div class="pool-instruction">點擊下方食材進行勾選：</div>
+                    <div id="vegetable-pool" class="chip-pool">
+                        <!-- 食材按鈕 -->
+                    </div>
+
+                    <button id="finish-picking" class="primary-btn full-width" style="margin-top: 30px;">
+                        完成挑選並返回
+                    </button>
+                </section>
+            </div>
+        </main>
+
+        <div id="toast" class="toast">已更新！</div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+
+</html>
