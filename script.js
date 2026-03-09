@@ -3,7 +3,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const addBtn = document.getElementById('add-btn');
     const vegetablePool = document.getElementById('vegetable-pool');
     const dailySelection = document.getElementById('daily-selection');
-    const itemsCount = document.getElementById('items-count');
     const currentDayName = document.getElementById('current-day-name');
     const clearMenuBtn = document.getElementById('clear-menu');
     const toast = document.getElementById('toast');
@@ -43,7 +42,12 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // Data Structure
+    // ----------------------------------------------------------------
+    // 資料結構
+    // items：食材庫（全域共用），每筆 { id, text }
+    // dailyMenus：每日紀錄，key 為日期字串，value 為食材【文字】陣列
+    //   => 與食材庫完全獨立，刪除食材庫不影響歷史紀錄
+    // ----------------------------------------------------------------
     let items = JSON.parse(localStorage.getItem('vegPool')) || [
         { id: '1', text: '青江菜' },
         { id: '2', text: '大白菜' },
@@ -51,7 +55,32 @@ document.addEventListener('DOMContentLoaded', () => {
         { id: '4', text: '高麗菜' }
     ];
 
+    // dailyMenus[dateStr] = ['青江菜', '胡蘿蔔', ...]  (存文字，非 ID)
     let dailyMenus = JSON.parse(localStorage.getItem('dailyMenus')) || {};
+
+    // --- 舊資料相容性升級 ---
+    // 若舊格式仍以 ID 儲存（全為數字字串），自動轉換為文字
+    (function migrateLegacyData() {
+        let needSave = false;
+        for (let date in dailyMenus) {
+            const arr = dailyMenus[date];
+            if (arr.length === 0) continue;
+            // 判斷是否為 ID 格式（純數字字串）
+            const looksLikeIds = arr.every(v => /^\d+$/.test(v));
+            if (looksLikeIds) {
+                dailyMenus[date] = arr
+                    .map(id => {
+                        const found = items.find(i => i.id === id);
+                        return found ? found.text : null;
+                    })
+                    .filter(Boolean);
+                needSave = true;
+            }
+        }
+        if (needSave) {
+            localStorage.setItem('dailyMenus', JSON.stringify(dailyMenus));
+        }
+    })();
 
     function saveData() {
         localStorage.setItem('vegPool', JSON.stringify(items));
@@ -104,16 +133,13 @@ document.addEventListener('DOMContentLoaded', () => {
         div.className = 'cal-day';
         if (isNotCurrentMonth) div.classList.add('not-current');
 
-        // 算出這個格子的日期字串
-        let dateObj;
         if (isNotCurrentMonth) {
             div.textContent = day;
             calendarGrid.appendChild(div);
             return;
-        } else {
-            dateObj = new Date(currentViewDate.getFullYear(), currentViewDate.getMonth(), day);
         }
 
+        const dateObj = new Date(currentViewDate.getFullYear(), currentViewDate.getMonth(), day);
         const dateStr = formatDate(dateObj);
         div.textContent = day;
 
@@ -142,10 +168,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function renderPool() {
         vegetablePool.innerHTML = '';
-        const currentMenuIds = dailyMenus[selectedDateStr] || [];
+        // 取得當日已記錄的食材文字清單
+        const currentMenuTexts = dailyMenus[selectedDateStr] || [];
 
         items.forEach(item => {
-            const isActive = currentMenuIds.includes(item.id);
+            const isActive = currentMenuTexts.includes(item.text);
             const chip = document.createElement('div');
             chip.className = `v-chip ${isActive ? 'active' : ''}`;
             chip.innerHTML = `
@@ -161,7 +188,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     deleteFromPool(item.id);
                     return;
                 }
-                toggleItemInMenu(item.id);
+                toggleItemInMenu(item.text);
             });
 
             vegetablePool.appendChild(chip);
@@ -171,45 +198,46 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function renderDailyMenu() {
         dailySelection.innerHTML = '';
-        const currentMenuIds = dailyMenus[selectedDateStr] || [];
+        // 直接以文字陣列渲染，不依賴食材庫
+        const currentMenuTexts = dailyMenus[selectedDateStr] || [];
 
-        if (currentMenuIds.length === 0) {
+        if (currentMenuTexts.length === 0) {
             dailySelection.innerHTML = '<div class="empty-state">目前紀錄空白。請點擊按鈕去挑選食材</div>';
             return;
         }
 
-        currentMenuIds.forEach(id => {
-            const item = items.find(i => i.id === id);
-            if (!item) return;
-
+        currentMenuTexts.forEach(text => {
             const div = document.createElement('div');
             div.className = 'menu-item';
             div.innerHTML = `
-                <span>${item.text}</span>
+                <span>${text}</span>
                 <span class="remove-item" title="移除此項">×</span>
             `;
 
             div.querySelector('.remove-item').addEventListener('click', (e) => {
                 e.stopPropagation();
-                toggleItemInMenu(item.id);
+                toggleItemInMenu(text);
             });
 
             dailySelection.appendChild(div);
         });
     }
 
-    function toggleItemInMenu(itemId) {
+    // ----------------------------------------------------------------
+    // toggleItemInMenu：改為操作「文字」而非 ID
+    // ----------------------------------------------------------------
+    function toggleItemInMenu(itemText) {
         if (!dailyMenus[selectedDateStr]) {
             dailyMenus[selectedDateStr] = [];
         }
 
         const menu = dailyMenus[selectedDateStr];
-        const index = menu.indexOf(itemId);
+        const index = menu.indexOf(itemText);
 
         if (index > -1) {
             menu.splice(index, 1);
         } else {
-            menu.push(itemId);
+            menu.push(itemText);
         }
 
         saveData();
@@ -218,20 +246,20 @@ document.addEventListener('DOMContentLoaded', () => {
         renderCalendar();
     }
 
+    // ----------------------------------------------------------------
+    // deleteFromPool：僅從食材庫移除，完全不影響各日紀錄
+    // ----------------------------------------------------------------
     function deleteFromPool(itemId) {
-        if (!confirm('確定要從食材庫中永久移除嗎？')) return;
+        if (!confirm('確定要從食材庫中永久移除嗎？\n\n已記錄在各天的紀錄不受影響。')) return;
 
         items = items.filter(i => i.id !== itemId);
 
-        for (let date in dailyMenus) {
-            dailyMenus[date] = dailyMenus[date].filter(id => id !== itemId);
-        }
-
+        // 不再清除 dailyMenus，歷史紀錄保持完整
         saveData();
         renderPool();
         renderDailyMenu();
         renderCalendar();
-        showToast('已從庫中移除');
+        showToast('已從食材庫移除（歷史紀錄保留）');
     }
 
     function addItem() {
